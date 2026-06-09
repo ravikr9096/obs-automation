@@ -1,6 +1,8 @@
 import os
 import pickle
 import random
+import requests as http_requests
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from obswebsocket import obsws, requests, exceptions
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -16,7 +18,28 @@ CAMERA_SOURCE_NAME = "Camera"  # Exact name of your camera source in OBS
 # YouTube API Setup Scope
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
-
+CRICKET_MASTER_HASHTAGS = [
+    "CricketLive", "LiveCricket", "MatchDay", "LiveMatch", "CricketMatch",
+    "GameOn", "LiveScore", "CricketUpdates", "BallByBall", "InningsBreak",
+    "LiveStreaming", "MatchFixtures", "CricketAction", "OnTheField", "LiveNow",
+    "CricketGround", "CricketStadium", "StadiumVibes", "AtTheGround", "PitchReport",
+    "GreenTop", "UnderTheLights", "StadiumLights", "MatchAtmosphere", "HomeGround",
+    "CricketField", "Outfield", "BoundaryRope", "StandsAreFull", "CrowdRoar",
+    "Howzat", "ClassicCatch", "CleanBowled", "Maximum6", "SuperOver",
+    "HatTrick", "Powerplay", "DeathOvers", "Centurion", "FiveFor",
+    "FreeHit", "DirectHit", "Stumping", "UmpireDecision", "DRSReview",
+    "CricketFever", "CricketFans", "CricketMerch", "BarmyArmy", "CricketFamily",
+    "BleedBlue", "FanZone", "12thMan", "CricketLife", "LoveCricket",
+    "CricketCrazy", "CricketJunkie", "SupportYourTeam", "CricketNation",
+    "T20Cricket", "ODI", "TestCricket", "GullyCricket", "LocalCricket",
+    "ClubCricket", "BoxCricket", "TournamentDay", "ChampionshipMatch", "KnockoutStage",
+    "GrandFinale", "LeagueCricket", "SundayCricket", "WeekendMatch", "CricketSeries",
+    "Cricket", "CricLife", "CricketGram", "CricHeroes", "CricketLovers",
+    "CricketVideo", "CricketReels", "CricketShorts", "CricketWorld", "InstaCricket",
+    "CricketPhotography", "CricketLove", "CricketMeme", "GentlemansGame", "CricketIsLife",
+    "CricketNews", "BattingMasterclass", "FastBowling", "SpinWizard", "FieldingDrills",
+    "Captaincy", "AllRounder", "CoverDrive", "Yorker", "HelicopterShot", "ManOfTheMatch"
+]
 
 
 def get_youtube_service():
@@ -95,6 +118,41 @@ def create_youtube_broadcast(youtube, title, description):
     return stream_key, broadcast_id
 
 
+def fetch_stream_title(match_id):
+    """Fetches match title and tournament name to generate the stream title."""
+    try:
+        # 1. Fetch match_title using BeautifulSoup
+        url1 = f"https://cricheroes.com/scorecard/{match_id}/abc/abc/summary"
+        web_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        }
+        response1 = http_requests.get(url1, headers=web_headers)
+        response1.raise_for_status()
+        soup = BeautifulSoup(response1.text, 'html.parser')
+        og_title_meta = soup.find('meta', property='og:title')
+        match_title = og_title_meta['content'] if og_title_meta else f"Match {match_id}"
+        if "Match" in match_title:
+            match_title = match_title.split("Match")[0]
+        
+        # 2. Fetch tournament_name from API
+        url2 = f"https://api.cricheroes.in/api/v1/scorecard/get-match-detailed-info/{match_id}"
+        headers = {
+            "api-key": "cr!CkH3r0s",
+            "device-type": "Chrome: 148.0.0.0",
+            "udid": "Test"
+        }
+        response2 = http_requests.get(url2, headers=headers)
+        response2.raise_for_status()
+        api_data = response2.json()
+        tournament_name = api_data.get("data", {}).get("tournament_name", "Unknown Tournament")
+
+        return f"{match_title} ( {tournament_name})"
+    except Exception as e:
+        print(f"⚠️ Could not fetch title details: {e}")
+        return f"Live Match {match_id}"
+
+
 def update_obs_and_stream(stream_key, ticker_url, camera_url):
     """Connects to OBS via WebSocket, updates browser source, and goes live."""
     ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
@@ -153,10 +211,24 @@ if __name__ == "__main__":
         # Initialize YouTube API
         yt_service = get_youtube_service()
 
-        # Get user input for stream details
-        stream_title = input("Enter stream title: ")
-        stream_description = input("Enter stream description: ")
         match_id = input("Enter match ID: ").strip()
+
+        # Generate stream title dynamically
+        print(f"🔍 Fetching details for match ID {match_id}...")
+        stream_title = fetch_stream_title(match_id)
+        print(f"✅ Generated Stream Title: {stream_title}")
+
+        # Allow user to edit the generated title
+        user_title = input(f"Press Enter to keep this title, or type a new one:\n[{stream_title}] > ").strip()
+        if user_title:
+            stream_title = user_title
+        print(f"📝 Final Stream Title: {stream_title}")
+
+        # Generate stream description automatically with 5-10 hashtags
+        num_hashtags = random.randint(5, 10)
+        selected_hashtags = random.sample(CRICKET_MASTER_HASHTAGS, num_hashtags)
+        stream_description = "Live cricket match broadcast!\n\n" + " ".join([f"#{tag}" for tag in selected_hashtags])
+        print(f"📝 Generated Stream Description:\n{stream_description}\n")
 
         ticker_urls = [
             f"https://webticker.cricheroes.com/midnight-fire/{match_id}/",

@@ -153,6 +153,26 @@ def fetch_stream_title(match_id):
         return f"Live Match {match_id}"
 
 
+def check_obs_connection():
+    """Checks if OBS is running and the WebSocket password is correct."""
+    print("🔍 Checking OBS Studio connection...")
+    ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
+    try:
+        ws.connect()
+        ws.disconnect()
+        print("✅ Successfully connected to OBS Studio.")
+        return True
+    except Exception as e:
+        print("\n❌ ERROR: Could not connect to OBS Studio.")
+        print("Please check the following instructions:")
+        print("  1. Ensure OBS Studio is currently open and running.")
+        print("  2. In OBS, go to Tools -> WebSocket Server Settings and ensure it is enabled.")
+        print(f"  3. Ensure the Server Port is set to {OBS_PORT}.")
+        print(f"  4. Verify the OBS_PASSWORD in the configuration matches the one in OBS.")
+        print(f"  [Technical Details: {e}]\n")
+        return False
+
+
 def update_obs_and_stream(stream_key, ticker_url, camera_url):
     """Connects to OBS via WebSocket, updates browser source, and goes live."""
     ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
@@ -207,6 +227,9 @@ def update_obs_and_stream(stream_key, ticker_url, camera_url):
 
 
 if __name__ == "__main__":
+    if not check_obs_connection():
+        exit(1)
+        
     try:
         # Initialize YouTube API
         yt_service = get_youtube_service()

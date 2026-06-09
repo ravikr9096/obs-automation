@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 # --- CONFIGURATION ---
 OBS_HOST = "localhost"
 OBS_PORT = 4455
-OBS_PASSWORD = "abOvpgdpRBopj5fd"
+OBS_PASSWORD = "Admin6011"
 BROWSER_SOURCE_NAME = "Ticker"  # Exact name of your browser source in OBS
 CAMERA_SOURCE_NAME = "Camera"  # Exact name of your camera source in OBS
 # YouTube API Setup Scope

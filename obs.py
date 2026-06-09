@@ -260,5 +260,8 @@ if __name__ == "__main__":
         # Step 3 & 4: Change OBS settings and hit stream
         update_obs_and_stream(youtube_stream_key, ticker_url, camera_url)
 
+        youtube_url = f"https://www.youtube.com/watch?v={broadcast_id}"
+        print(f"\n▶️ Watch your live stream here: {youtube_url}\n")
+
     except Exception as error:
         print(f"💥 Script failed: {error}")

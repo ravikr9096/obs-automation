@@ -1,5 +1,6 @@
 import os
 import pickle
+import random
 from datetime import datetime, timezone
 from obswebsocket import obsws, requests, exceptions
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -11,9 +12,11 @@ OBS_HOST = "localhost"
 OBS_PORT = 4455
 OBS_PASSWORD = "abOvpgdpRBopj5fd"
 BROWSER_SOURCE_NAME = "Ticker"  # Exact name of your browser source in OBS
-
+CAMERA_SOURCE_NAME = "Camera"  # Exact name of your camera source in OBS
 # YouTube API Setup Scope
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
+
+
 
 
 def get_youtube_service():
@@ -92,7 +95,7 @@ def create_youtube_broadcast(youtube, title, description):
     return stream_key, broadcast_id
 
 
-def update_obs_and_stream(stream_key, ticker_url):
+def update_obs_and_stream(stream_key, ticker_url, camera_url):
     """Connects to OBS via WebSocket, updates browser source, and goes live."""
     ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
 
@@ -109,6 +112,15 @@ def update_obs_and_stream(stream_key, ticker_url):
             )
         )
         print("✅ Browser source updated!")
+
+        # Update the Camera Source Input
+        print(f"📷 Updating Camera Source '{CAMERA_SOURCE_NAME}' to {camera_url}...")
+        ws.call(
+            requests.SetInputSettings(
+                inputName=CAMERA_SOURCE_NAME, inputSettings={"input": camera_url}
+            )
+        )
+        print("✅ Camera source updated!")
 
         # 2. Inject the YouTube Stream Key dynamically into OBS
         # This replaces the need to click "Manage Broadcast" inside the UI
@@ -144,7 +156,29 @@ if __name__ == "__main__":
         # Get user input for stream details
         stream_title = input("Enter stream title: ")
         stream_description = input("Enter stream description: ")
-        ticker_url = input("Enter ticker URL: ")
+        match_id = input("Enter match ID: ").strip()
+
+        ticker_urls = [
+            f"https://webticker.cricheroes.com/midnight-fire/{match_id}/",
+            f"https://webticker.cricheroes.com/minimalist/{match_id}/",
+            f"https://webticker.cricheroes.com/modern-edge/{match_id}/",
+            f"https://webticker.cricheroes.com/bold-play/{match_id}/",
+            f"https://webticker.cricheroes.com/crystal-view/{match_id}/",
+            f"https://webticker.cricheroes.com/fresh-field/{match_id}/"
+        ]
+        ticker_url = random.choice(ticker_urls)
+        print(f"🎲 Randomly selected Ticker URL: {ticker_url}")
+
+        while True:
+            ground_choice = input("Select Ground (1 for Ground 1, 2 for Ground 2): ").strip()
+            if ground_choice == '1':
+                camera_url = "rtsp://admin:Admin@1508@192.168.0.111/Streaming/Channels/101/"
+                break
+            elif ground_choice == '2':
+                camera_url = "rtsp://admin:Admin@1508@192.168.0.110/Streaming/Channels/101/"
+                break
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
 
         # Step 1 & 2: Define and create the broadcast on YouTube
         youtube_stream_key, broadcast_id = create_youtube_broadcast(
@@ -152,7 +186,7 @@ if __name__ == "__main__":
         )
 
         # Step 3 & 4: Change OBS settings and hit stream
-        update_obs_and_stream(youtube_stream_key, ticker_url)
+        update_obs_and_stream(youtube_stream_key, ticker_url, camera_url)
 
     except Exception as error:
         print(f"💥 Script failed: {error}")

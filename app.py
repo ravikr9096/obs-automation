@@ -108,6 +108,8 @@ class StreamApp:
         stream_title = self.title_var.get().strip()
         ground_choice = self.ground_var.get()
         
+        obs_port = 4566 if ground_choice == '1' else 4555
+
         if not match_id or not stream_title:
             messagebox.showwarning("Input Required", "Match ID and Stream Title are required to go live.")
             return
@@ -118,16 +120,17 @@ class StreamApp:
         # Run stream automation in a background thread
         threading.Thread(
             target=self.run_automation_worker, 
-            args=(match_id, stream_title, ground_choice), 
+            args=(match_id, stream_title, ground_choice, obs_port), 
             daemon=True
         ).start()
         
-    def run_automation_worker(self, match_id, stream_title, ground_choice):
+    def run_automation_worker(self, match_id, stream_title, ground_choice, obs_port):
         try:
             print("\n=========================================")
             print("🚀 Starting Stream Automation Process...")
+            print(f"🎯 Targeting OBS instance on port {obs_port}...")
             
-            if not obs.check_obs_connection():
+            if not obs.check_obs_connection(port=obs_port):
                 print("=========================================")
                 return
             
@@ -152,7 +155,7 @@ class StreamApp:
             camera_url = "rtsp://admin:Admin@1508@192.168.0.111/Streaming/Channels/101/" if ground_choice == '1' else "rtsp://admin:Admin@1508@192.168.0.110/Streaming/Channels/101/"
                 
             youtube_stream_key, broadcast_id = obs.create_youtube_broadcast(yt_service, stream_title, stream_description)
-            obs.update_obs_and_stream(youtube_stream_key, ticker_url, camera_url)
+            obs.update_obs_and_stream(youtube_stream_key, ticker_url, camera_url, port=obs_port)
             
             print(f"\n▶️ Watch your live stream here: https://www.youtube.com/watch?v={broadcast_id}")
             print("=========================================")

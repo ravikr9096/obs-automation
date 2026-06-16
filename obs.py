@@ -153,10 +153,10 @@ def fetch_stream_title(match_id):
         return f"Live Match {match_id}"
 
 
-def check_obs_connection():
+def check_obs_connection(host=OBS_HOST, port=OBS_PORT, password=OBS_PASSWORD):
     """Checks if OBS is running and the WebSocket password is correct."""
     print("🔍 Checking OBS Studio connection...")
-    ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
+    ws = obsws(host, port, password)
     try:
         ws.connect()
         ws.disconnect()
@@ -167,15 +167,15 @@ def check_obs_connection():
         print("Please check the following instructions:")
         print("  1. Ensure OBS Studio is currently open and running.")
         print("  2. In OBS, go to Tools -> WebSocket Server Settings and ensure it is enabled.")
-        print(f"  3. Ensure the Server Port is set to {OBS_PORT}.")
-        print(f"  4. Verify the OBS_PASSWORD in the configuration matches the one in OBS.")
+        print(f"  3. Ensure the Server Port is set to {port}.")
+        print(f"  4. Verify the password in the configuration matches the one in OBS.")
         print(f"  [Technical Details: {e}]\n")
         return False
 
 
-def update_obs_and_stream(stream_key, ticker_url, camera_url):
+def update_obs_and_stream(stream_key, ticker_url, camera_url, host=OBS_HOST, port=OBS_PORT, password=OBS_PASSWORD):
     """Connects to OBS via WebSocket, updates browser source, and goes live."""
-    ws = obsws(OBS_HOST, OBS_PORT, OBS_PASSWORD)
+    ws = obsws(host, port, password)
 
     try:
         ws.connect()
@@ -227,9 +227,6 @@ def update_obs_and_stream(stream_key, ticker_url, camera_url):
 
 
 if __name__ == "__main__":
-    if not check_obs_connection():
-        exit(1)
-        
     try:
         # Initialize YouTube API
         yt_service = get_youtube_service()
@@ -268,12 +265,17 @@ if __name__ == "__main__":
             ground_choice = input("Select Ground (1 for Ground 1, 2 for Ground 2): ").strip()
             if ground_choice == '1':
                 camera_url = "rtsp://admin:Admin@1508@192.168.0.111/Streaming/Channels/101/"
+                obs_port = 4566
                 break
             elif ground_choice == '2':
                 camera_url = "rtsp://admin:Admin@1508@192.168.0.110/Streaming/Channels/101/"
+                obs_port = 4555
                 break
             else:
                 print("Invalid choice. Please enter 1 or 2.")
+                
+        if not check_obs_connection(port=obs_port):
+            exit(1)
 
         # Step 1 & 2: Define and create the broadcast on YouTube
         youtube_stream_key, broadcast_id = create_youtube_broadcast(
@@ -281,7 +283,7 @@ if __name__ == "__main__":
         )
 
         # Step 3 & 4: Change OBS settings and hit stream
-        update_obs_and_stream(youtube_stream_key, ticker_url, camera_url)
+        update_obs_and_stream(youtube_stream_key, ticker_url, camera_url, port=obs_port)
 
         youtube_url = f"https://www.youtube.com/watch?v={broadcast_id}"
         print(f"\n▶️ Watch your live stream here: {youtube_url}\n")

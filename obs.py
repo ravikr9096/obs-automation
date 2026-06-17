@@ -10,7 +10,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # --- CONFIGURATION ---
-OBS_HOST = "localhost"
+OBS_HOST = "127.0.0.1"
 OBS_PORT = 4455
 OBS_PASSWORD = "Admin6011"
 BROWSER_SOURCE_NAME = "Ticker"  # Exact name of your browser source in OBS
